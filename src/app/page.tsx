@@ -1,113 +1,146 @@
-import Image from "next/image";
+"use client";
+import { useMachine } from "@xstate/react";
+import { assign, createMachine, setup } from "xstate";
+import type { NextPage } from "next";
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+const context = {
+    feedback: "",
+};
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+const feedbackMachine = setup({
+    actions: {
+        updateFeedback: assign({
+            feedback: ({ event }) => {
+                return event.value;
+            },
+        }),
+        reset: assign(context),
+    },
+    guards: {
+        feedbackValid: ({ context }) => {
+            return context.feedback.trim().length > 0;
+        },
+    },
+}).createMachine({
+    /** @xstate-layout N4IgpgJg5mDOIC5QAoC2BDAxgCwJYDswBKAOgAcAnAe1TIBcBiAMzEgCMsBrEqKqiANoAGALqJQZKrFx1cVfOJAAPRAGYA7ADYSAVgCMQgCzqhegByqzm1aoA0IAJ6IATAZJCPHvQE4L355o6ZgC+wfZoWHiEpJQ09MysEByY3ByCooqS0rLyiioIGtr6RibmltZ2joh6qnokmg0N6gF66r5WoeEYOATEJExUFKgMyZzCYkggWTJyCpP5hobaVkuL6m1BrvZOCGZ1eo2a3jrOQhY2zp0gET3R-YPDsACubKgy45lSM7nziJrGJEMZm8mj2QR0xkW20QwJIzh0nlqNUWlj0VxuUT6mAANlJIAwKHA6OgKHQPpNpjk5qB8noge5POZ1DZ1iZ1NDdt5dIYDkdvEJvOpDPzNKEwiB8Pw4IoMb0iJ9srM8ogALSaDkqnQkbw63V6vWqdHdTExai0OgK77U5QuHRa4qGfSOjxWcwc-nuHkNMweZyGDyqUXi2V3AZDS1U5UICF1IEgzTOMz6I7Mjmw9QIrynTQC-RGyJykh0bDofCceAUr6R34IDPqEgafR01SCoWC931zxeJY6DTOAL525Y3GwSARpU1wzOd1CT28n1CP0BoOhIA */
+    context,
+    initial: "prompt",
+    states: {
+        prompt: {
+            initial: "loading",
+            states: {
+                loading: {
+                    tags: ["loading"],
+                    after: {
+                        1000: "ready",
+                    },
+                },
+                ready: {},
+            },
+            on: {
+                "feedback.good": {
+                    target: "thanks",
+                },
+                "feedback.bad": {
+                    target: "form",
+                },
+                "feedback.reset": {
+                    actions: { type: "reset" },
+                },
+            },
+        },
+        form: {
+            on: {
+                "feedback.update": {
+                    actions: { type: "updateFeedback" },
+                },
+                back: {
+                    target: "prompt",
+                },
+                submit: {
+                    guard: {
+                        type: "feedbackValid",
+                    },
+                    target: "thanks",
+                },
+            },
+        },
+        thanks: {},
+        closed: {
+            on: {
+                restart: { target: "prompt" },
+            },
+        },
+    },
+    on: {
+        close: {
+            target: ".closed",
+        },
+    },
+});
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+const Home: NextPage = () => {
+    const [state, send] = useMachine(feedbackMachine);
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+    return (
+        <>
+            <h1>Aprendiendo XState</h1>
+            {state.hasTag("loading") && <div>Loading...</div>}
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+            <div className="feedback">
+                {state.matches("prompt") && (
+                    <div className="step">
+                        <h2>How was your experience?</h2>
+                        <button className="button" onClick={() => send({ type: "feedback.good" })}>
+                            Good
+                        </button>
+                        <button className="button" onClick={() => send({ type: "feedback.bad" })}>
+                            Bad
+                        </button>
+                    </div>
+                )}
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
-}
+                {state.matches("thanks") && (
+                    <div className="step">
+                        <h2>Thanks for your feedback.</h2>
+                        {state.context.feedback.length > 0 && <p>"{state.context.feedback}"</p>}
+                    </div>
+                )}
+
+                {state.matches("form") && (
+                    <div className="step">
+                        <form
+                            className="step"
+                            onSubmit={(ev) => {
+                                ev.preventDefault();
+                                send({
+                                    type: "submit",
+                                });
+                            }}
+                        >
+                            <h2>What can we do better?</h2>
+                            <textarea
+                                name="feedback"
+                                rows={4}
+                                placeholder="So many things..."
+                                onChange={(ev) => {
+                                    send({
+                                        type: "feedback.update",
+                                        value: ev.target.value,
+                                    });
+                                }}
+                            />
+                            <p>{state.context.feedback}</p>
+                            <button className="button" disabled={!state.can({ type: "submit" })}>
+                                Submit
+                            </button>
+                            <button className="button">Back</button>
+                        </form>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+};
+
+export default Home;
